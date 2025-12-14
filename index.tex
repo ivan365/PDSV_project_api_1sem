@@ -1,0 +1,1014 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage[slovak]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{tocloft}
+
+% (hyperref/url/csquotes перенесены ниже, ближе к концу преамбулы)
+
+\usepackage{booktabs} % Для красивых горизонтальных линий
+\usepackage{geometry}
+\geometry{a4paper, margin=1in} 
+\usepackage{array} % Для форматирования столбцов
+\usepackage{multirow} % Для объединения строк (если потребуется)
+\usepackage{amsmath}
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\setlength{\headheight}{14.5pt}
+\pagestyle{fancy}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+
+\usepackage[acronym]{glossaries}
+\makeglossaries
+
+\fancyhf{}
+\fancyhead[L]{\nouppercase{\leftmark}}
+\fancyhead[R]{\nouppercase{\rightmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+
+
+\usepackage{lmodern}
+
+\lstdefinelanguage{MyASM}{
+    keywords={
+        NOP, ADD, SUB, MUL, DIV, LMR, LRM, LRR, CMP, EQL, GRT, 
+        AND, OR, NOT, XOR, JMP
+    },
+    sensitive=true,          % чувствительность к регистру
+    morecomment=[l]{;},      % комментарий начинается с ;
+    morestring=[b]"           % строки в кавычках
+}
+% Настройка отображения кода
+\lstset{
+    language=MyASM,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black}\itshape,
+    stringstyle=\color{red},
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    breaklines=true,
+    tabsize=4
+}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows.meta, positioning, quotes, calc}
+
+\usepackage{graphicx}
+\graphicspath{{img/}}
+\usepackage{float} % для опции [H] при необходимости
+\usepackage{placeins} % \FloatBarrier
+
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+\usepackage{csquotes}
+
+%\usepackage[ocgcolorlinks]{ocgx2}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+% \bibliography{refs} % biblatex already uses \addbibresource
+\title{\textbf{\huge Experimentovanie s vlastnou inštrukčnou sadou} \\[1em] Less Instruction Machine (LIM) \\[1em] \small Fakulta elektrotechniky a informatiky \\ Slovenskej technickej univerzity v Bratislave \\[0.5em] Aplikovaná informatika}
+\author{Ivan Hniedash \\ \small xhniedash@stuba.sk}
+\date{4. novembra 2025}
+
+
+
+\newacronym{opcode}{op-kód}{operation code — číselný kód určujúci, akú inštrukciu má procesor vykonať}
+\newacronym{mux}{MUX}{multiplexor}
+\newacronym{dmux}{DMUX}{demultiplexor}
+\newacronym{alu}{ALU}{Aritmetická logická jednotka}
+\newacronym{lim}{LIM}{Limited Instruction Machine — architektúra procesora navrhnutého autorom}
+\newacronym{arm}{ARM}{Advanced RISC Machine — procesorová architektúra založená na zjednodušenej súprave inštrukcií}
+\newacronym{gpu}{GPU}{Graphic Processing Unit -- grafický procesor}
+\newacronym{cpu}{CPU}{Central Processing Unit -- centrálna procesorová jednotka}
+\newacronym{mmx}{MMX}{multimediálne rozšírenie inštrukčnej sady procesora}
+\newacronym{sse}{SSE}{Streaming SIMD Extensions — rozšírenie inštrukčnej sady procesora}
+\newacronym{avx}{AVX}{Advanced Vector Extensions — vektorové rozšírenie inštrukčnej sady procesora}
+\newacronym{hex}{HEX}{hexadecimálny (šestnástkový) číselný systém}
+\newacronym{reg}{REG}{skratka pre register}
+
+
+
+\begin{document}
+    \maketitle
+    \thispagestyle{empty}
+
+    \newpage
+    \begin{abstract}
+    Táto práca sa zaoberá návrhom a~popisom vlastného procesora 
+    s architektúrou \gls{lim} a~jeho prvej 
+    implementácie \gls{lim} M1. Práca stručne a~zrozumiteľne vysvetľuje 
+    princíp fungovania procesora, pričom väčší dôraz je kladený 
+    na jeho programovanie než na samotnú hardvérovú realizáciu.
+    
+    Text postupne predstavuje základné vlastnosti architektúry 
+    \gls{lim}, jej inštrukčnú sadu a~vlastný assemblerový jazyk 
+    navrhnutý špeciálne pre tento procesor. Súčasťou práce je 
+    aj vysvetlenie vykonávania inštrukcií na úrovni mikrokódu, 
+    čo umožňuje lepšie pochopiť vnútornú logiku procesora a~spôsob 
+    spracovania dát.
+    
+    V záverečnej časti sú uvedené praktické príklady algoritmov a~programov 
+    napísaných v \gls{lim} Assembly, ktoré demonštrujú možnosti procesora a~princípy 
+    jeho efektívneho programovania. Práca tak poskytuje ucelený úvod do návrhu 
+    aj programovania jednoduchého, no plne funkčného procesora.
+
+    \end{abstract}
+    \thispagestyle{empty}
+
+    \newpage
+    \tableofcontents
+    \newpage
+    \listoffigures
+    \addcontentsline{toc}{section}{Zoznam obrázkov}
+    \newpage
+
+    
+    
+    \listoftables
+    \addcontentsline{toc}{section}{Zoznam tabuliek}
+    \newpage
+
+    
+
+    %\printglossary[type=\acronymtype, title={List of Abbreviations}]
+    %\addcontentsline{toc}{section}{List of Abbreviations}
+    %\newpage
+
+    \printacronyms[title={List of Abbreviations}]
+    \addcontentsline{toc}{section}{List of Abbreviations}
+    \newpage
+
+    
+
+    \listofalgorithms
+    \addcontentsline{toc}{section}{List of Algorithms}
+    \newpage
+
+
+
+    \lstlistoflistings
+    \addcontentsline{toc}{section}{List of Listings}
+    \thispagestyle{empty}
+    \newpage
+
+
+    \newpage
+    \section*{Úvod}
+
+    Procesor, ako povedal \textcite{AlKzairJanuziBlom}, známy aj ako \gls{cpu}, je 
+    základná výpočtová jednotka každého počítača alebo 
+    elektronického zariadenia. Jeho úlohou je vykonávať 
+    inštrukcie programu, spracovávať dáta a~riadiť 
+    komunikáciu medzi jednotlivými komponentmi systému, 
+    ako sú pamäť, vstupné a~výstupné zariadenia.
+
+    Cieľom tejto práce je ukázať princíp fungovania procesora 
+    na jednoduchšom, transparentnom modeli vytvorenom autorom. 
+    Navrhnutý procesor s architektúrou \gls{lim} (Limited Instruction Machine) 
+    a~označením \gls{lim} M1 je koncipovaný tak, aby bolo možné jednoznačne 
+    sledovať tok údajov, vykonávanie inštrukcií a~riadenie operácií na 
+    úrovni mikrokódu.
+
+    Práca sa zameriava najmä na programovanie procesora, jeho inštrukčnú 
+    sadu a~spôsob vykonávania programov v~nízkoúrovňovom assemblerovom jazyku. 
+    Vysvetlenie hardvérovej štruktúry slúži predovšetkým ako prostriedok na 
+    lepšie pochopenie správania procesora pri vykonávaní algoritmov, nie ako 
+    cieľ sám o~sebe.
+
+    V ďalších kapitolách je postupne predstavená architektúra \gls{lim}, vlastný 
+    assemblerový jazyk, vnútorná štruktúra procesora a~princípy mikroprogramového 
+    riadenia. Záverečná časť práce obsahuje praktické príklady algoritmov, 
+    ktoré demonštrujú možnosti procesora a~ilustrujú efektívne využitie jeho 
+    architektúry v praxi.
+
+
+
+    \begin{description}
+        \item[Aplikacie a simulatory] V tejto sekcii sa nachádza základný 
+        zoznam potrebných programov na začatie práce s~procesorom, ako 
+        aj zoznam odporúčaných programov na zrýchlenie a~zjednodušenie práce.
+        \item[\gls{lim} architektúra] V tejto sekcii nájdete informácie o~vlastnostiach architektúry, o~jej možnostiach, ako aj sa 
+        oboznámite s jej základnými komponentmi.
+        \item[Inštrukcie a Inštrukčná sada] V tejto sekcii je opísaný 
+        autorom vyvinutý assemblerový jazyk a~zoznam inštrukcií v~assemblerovom jazyku aj v~jeho strojovej podobe. Taktiež 
+        je tu predstavená štruktúra inštrukcie na úrovni strojového kódu.
+        \item[Vnútorná štruktúra procesora \gls{lim}] V tejto sekcii je 
+        podrobne rozobraný autorom vyvinutý procesor na hardvérovej 
+        úrovni s~cieľom presnejšie pochopiť princíp jeho fungovania, 
+        čo pomôže programovať procesor efektívnejšie. Je tu opísaná 
+        fyzická štruktúra procesora, spôsob jeho fungovania na úrovni 
+        logiky, ako aj vysvetlené, čo je mikrokód (mikroinštrukcie), 
+        spolu s~príkladmi inštrukcií vo forme mikrokódu.
+        \item[Vývoj algoritmu (programu)] Táto sekcia predstavuje 
+        praktickú časť práce; sú tu uvedené algoritmy možných úloh 
+        pre tento procesor a~ich realizácia vo vlastnom assemblerovom 
+        jazyku s~podrobným vysvetlením toho, čo sa deje.
+    \end{description}
+
+    
+
+    \newpage
+    \section{Aplikacie a simulatory}
+    Nižšie sú uvedené programy (aplikacie) nevyhnutné pre túto prácu, 
+    ako aj zoznam odporúčaných aplikácií na optimalizáciu práci. 
+    \subsection{Logisim}
+    Na vytvorenie tohto procesora bol použitý simulátor 
+    logických obvodov \textbf{Logisim-Evolution} \cite[]{gitLogisimEvolution}. Toto je 
+    fork -- vylepšená verzia pôvodného simulátora \textbf{Logisim} \cite{LogisimWebPage}. Na testovanie 
+    alebo simuláciu úloh na tomto procesore je táto aplikácia nevyhnutná.
+
+    \subsection{LIM Assembly Compilator}
+    \gls{lim} Assembly Compilator \cite{LIMASM} je kompilátor 
+    strojového kódu napísaný autorom \textcite{github_my}. Prijíma 
+    assemblerový kód a potom vytvára niekoľko súborov. 
+    Súčasťou je aj čistý binárny súbor pripravený na 
+    priame načítanie do pamäte, binárny zásobník príkazov 
+    a~pripravený obraz pamäte pre simulátor Logisim. 
+    Algoritmus momentálne vyžaduje nainštalovanú 
+    najnovšiu verziu Python, alebo použite verziu 
+    programu kompilovanú v~jazyku C. Sú dostupné pre Mac a Windows.
+    
+    Tento kompilátor nie je povinný softvér, ale výrazne urýchľuje 
+    následnú prácu so strojovým kódom. Inak by písanie programov 
+    pre procesor zahŕňalo zapisovanie binárnych čísel do pamäte pomocou tabuľky.
+
+    \subsection{Odporúčané programy}
+    \begin{itemize}
+        \item \textbf{CST} alebo akýkoľvek program na rýchly 
+        prevod čísel medzi rôznymi číselnými sústavami. 
+        Je odporúčané použiť konzolovú aplikáciu, ktorá je 
+        napísana autorom \textcite{github_my} — \textbf{CST} 
+        \cite{CSM}. Vyvinutá pre rýchlu prácu s~procesorom pred napísaním kompilátora. Program je 
+        stále užitočný, ak chcete upraviť inštrukcie alebo 
+        pridať vlastné mikroinštrukcie.
+        \item \textbf{Visual Studio Code} \cite{VSCode} je praktický editor kódu 
+        so vstavaným terminálom. Je ideálny na rýchle a~jednoduché písanie programov a ich kompiláciu. Je 
+        to vynikajúca voľba pre prácu s vlastným kompilátorom.
+    \end{itemize}
+    \section{LIM architektúra}
+    Procesor a architektúrou LIM nevyužíva konvejerové spracovanie. Každá inštrukcia 
+    sa vykonáva ako jeden ucelený krok, pričom ďalšia inštrukcia 
+    sa začne spracúvať až po dokončení predchádzajúcej. Výsledky 
+    výpočtu sú preto dostupné ihneď po ukončení vykonania inštrukcie.
+
+    Procesor je postavený na princípe „od začiatku do konca“: 
+    každá operácia sa vykoná úplne bez čakania na dáta z~externých zdrojov alebo medziľahlých vyrovnávacích pamätí.
+    Na rozdiel od pipeline procesorov to zjednodušuje programovanie 
+    a~eliminuje typické oneskorenia spojené s~čakaním na dáta medzi fázami.
+    \begin{itemize}
+        \item Nazov architektúry: Limited Instruction Machine (\gls{lim})
+        \item Názov procesora: \gls{lim} M1
+        \item Typ: 8-bitový nonpipeline (sekvenčný) procesor s matematickými výpočtami n-bitovými číslami 
+    \end{itemize}
+
+
+    \subsection{Základné komponenty a smerovanie dát}
+    \begin{itemize}
+        \item \textbf{Registre}: \gls{reg}. „Registre sú súčasťou procesora, 
+        ktoré uchovávajú hodnoty (napätia). Tieto registre obsahujú 
+        malé množstvo rýchlej pamäte, ktorá uchováva hodnoty uložené 
+        v~nich. Vďaka tomu sú registre jedinečné v~tom, že budú 
+        súčasťou dôležitých inštrukcií“ -- \textcite{AlKzairJanuziBlom}. Štyri registre na všeobecné 
+        použitie, používané na ukladanie operandov a~výsledkov.
+        \item \textbf{ALU}: \gls{alu}, ktorá podporuje sčítanie, 
+        odčítanie, násobenie a~delenie. Má vstavaný „kreditový systém“ na prenos/požičiavanie 
+        si pri práci s~číslami presahujúcimi štandardnú bitovú hĺbku. Je navrhnutá 
+        tak, aby práca s~extrémne veľkými číslami nebola problémom.
+        \item \textbf{ALU cache}: Dve interné cache určené na ukladanie operandov 
+        pred spracovaním, čo pomáha minimalizovať čas prístupu a~organizovať 
+        pseudoparalelné výpočty.
+        \item \textbf{Riadiaca jednotka}: riadi postupnosť mikroinštrukcií a obsahuje 
+        špeciálny blok – „Dátový mostík“, ktorý vybera medzi internými a externými dátami na spracovanie, ALU a~vyrovnávacími pamäťami bez použitia spoločnej internej zbernice.
+        \item \textbf{Multiplexory}: \gls{mux} Umožňujú výber zdrojov údajov pre \gls{alu} a~riadiacu jednotku, poskytujú flexibilné smerovanie a~možnosť priameho 
+        obídenia registrov, čím sa šetrí čas.
+    \end{itemize}
+    \subsection{Smerovanie dát a~základné princípy práce s~údajmi}  
+    %\subsubsection{Cirkulácia údajov}
+    Údaje sa pohybujú v cykle: Dáta sa presúvajú cyklicky. Tabuľka
+    \ref{diagram:tok_udajov} popísuje ten to proces. 
+    To zjednodušuje logiku procesora a~umožňuje spoľahlivé výpočty. 
+    Táto organizácia eliminuje potrebu vyrovnávacích 
+    pamätí pre prerušenie reťazca a~udržiava vysokú rýchlosť spracovania.\\
+    \begin{figure}[htbp]
+        \centering
+        \caption{Tok údajov v procesore}
+            \begin{tikzpicture}[
+            block/.style={rectangle, draw, minimum width=3.5cm, minimum height=1cm, align=center, fill=gray!10},
+            alu/.style={block, fill=blue!40, text=black},
+            reg/.style={block, fill=green!40, minimum width=3cm},
+            data/.style={thick, -{Stealth}, line cap=round}
+            ]
+                \node (R) [reg] {Register};
+                \node (AC) [block, right=3cm of R] {ALU Cache Input};
+                \node (A) [alu, below=3cm of AC] {ALU (Arithmetic Logic Unit)};
+
+                \draw[data] (R.east) -- (AC.west) 
+                    node [midway, above] { (Read)};
+                \draw[data] (AC.south) -- (A.north) 
+                    node [midway, left] {Odovzdávanie operandov};
+                \draw[data] (A.west) -- (R.south) 
+                    node [midway, left] {Zachovanie dát};
+            \end{tikzpicture} \\
+        \label{diagram:tok_udajov}
+    \end{figure}
+    \subsubsection{Pseudoparalelizmus} 
+        Izoláciou požičiavania--pretečenia operácií násobenia--delenia a~súčtu--rozdielu je možné operácie logicky vykonávať „bezprostredne 
+        za sebou“ bez vzájomného rušenia, čím sa zrýchľuje práca s~veľkými číslami. 
+        Na prerušenie „kontextu“ vykonávania musíte použiť inštrukciu \texttt{NOP}.
+    \subsubsection{Spracovanie pamäte}
+        Procesor podporuje načítavanie údajov z~pamäte 
+        a~ich spätný zápis do pamäte s možnosťami 
+        podmieneného vetvenia a~riadenia toku.
+    \subsection{Vlastnosti aritmetiky a porovnávania}
+    \begin{itemize}
+        \item \textbf{Veľké čísla}: Procesor je navrhnutý tak, aby pracoval 
+        s~diskrétnymi prirodzenými číslami s~prakticky neobmedzenou bitovou 
+        hĺbkou, vrátane sčítania, odčítania, násobenia a~delenia.
+        \item \textbf{Pokročilé možnosti porovnávania}: Procesor dokáže 
+        vykonávať priame porovnávania (a > b, a < b) a nepriame porovnávania 
+        (a ? b → <, >, =), čo je obzvlášť užitočné pre matematické dôkazy a~prácu s~abstraktnými numerickými štruktúrami.
+        \item \textbf{Systém kreditov \gls{alu}}: Interné spúšťače umožňujú akumuláciu 
+        prenosov-poži\-čia\-va\-nia medzi číslicami počas sčítania-odčítania, ako aj 
+        korekciu čiastočných výsledkov násobenia a~delenia bez potreby externej synchronizácie.
+    \end{itemize}
+    \subsection{Špecifiká programovania}
+        \begin{itemize}
+            \item Jednoduchý a~deterministický model vykonávania, kde sa každá operácia vykonáva do konca, ako uvedené (pozr. diagram \ref{diagram:tok_udajov})
+            \item Nie je potrebné vkladať NOP ani čakať na údaje.
+            \item Mikroinštrukcie sú postavené na koncepcii „získanie údajov → vykonanie operácie → potvrdenie výsledku“.
+        \end{itemize}
+    \subsection{Kľúčové výhody architektúry}
+    \begin{itemize}
+        \item Podpora prakticky nekonečných čísel je jedinečnou vlastnosťou 8-bitových procesorov.
+        \item Pokročilé porovnávacie možnosti pre zložité matematické a~vedecké výpočty.
+        \item Jednoduchosť programovania a~predvídateľnosť vykonávania vďaka kompletnému operačnému modelu bez pipeline.
+        \item Absencia spoločnej internej zbernice znižuje latenciu a zjednodušuje logiku smerovania.
+        \item Flexibilné smerovanie dát cez riadiaci mostík a~multiplexory.
+    \end{itemize}
+    \section{Inštrukcie a Inštrukčná sada}
+    Nasleduje tabuľka príkazov assembleru. Tabuľka bude obsahovať samotné 
+    príkazy, ich popisy, ich strojový kód v~hexadecimálnom formáte a~výslednú cestu. Ako už bolo spomenuté, pre pohodlie odporúčam použiť 
+    program na rýchly preklad z~rôznych výpočtových systémov \cite[CST]{CSM}. 
+    \subsection{Inštrukčná sada}
+    Ako uvedel \textcite{assembly} vo svojej praci --
+    Assembly je rodným jazykom procesora.
+    Procesor chápe assembly ako postupnosť núl a~jednotiek.
+    Túto formu nazývame strojový kód.
+    Pretože vytvára programy priamo v~jednej z~číselných sústav 
+    (binárnej, desiatkovej alebo šestnástkovej). 
+    Syntax jazyka vyvinutého pre architektúru \gls{lim} 
+    je popísaná v~tabuľke \ref{table:instrukcna_sada}
+
+        \begin{table}[htbp]
+            \caption{Inštrukčná sada}
+            \vspace{1em} % отступ снизу
+            \setlength{\tabcolsep}{10pt} % Zväčšenie medzery medzi stĺpcami
+            \renewcommand{\arraystretch}{1.2} % Zväčšenie výšky riadkov
+            \begin{tabular}{>{\ttfamily}l l p{5.5cm} l}
+                \toprule
+                \textbf{Operačný Kód} & \textbf{Mnemotech.} & \textbf{Popis / Operácia} & \textbf{Výsledok} \\
+                \midrule
+                \multicolumn{4}{l}{\textit{\textbf{Aritmetické operácie}}} \\
+                \midrule
+                0x0 & NOP & Bez operácie (No Operation) Vymaže pôžičky/prekročenia& --- \\
+                0x1 & ADD & Sčítanie: RG1 + RG2 & $\rightarrow$ R4 (ACC) \\
+                0x2 & SUB & Odčítanie: RG1 - RG2 & $\rightarrow$ R4 (ACC) \\
+                0x3 & MUL & Násobenie: RG1 * RG2 & $\rightarrow$ R4 (ACC) \\
+                0x4 & DIV & Delenie: RG1 / RG2 & $\rightarrow$ R4 (ACC) \\
+                \midrule
+                \multicolumn{4}{l}{\textit{\textbf{Operácie s pamäťou a registrami}}} \\
+                \midrule
+                0x5 & LMR & Načítanie (Load) z PAMÄTE(R0) do R1 (podľa R2 bytov) & $\rightarrow$ R4 (ACC) \\
+                0x6 & LRM & Uloženie (Save) dát z R1 do PAMÄTE(R2) & $\rightarrow$ R4 (ACC) \\
+                0x7 & LRR & Načítanie (Load) dát z R1 do R2 & $\rightarrow$ R4 (ACC) \\
+                \midrule
+                \multicolumn{4}{l}{\textit{\textbf{Operácie porovnávania}}} \\
+                \midrule
+                0x8 & CMP & Porovnanie R1 a R2 & $\rightarrow$ R4 (ACC) \\
+                0x9 & EQL & Sú R1 a R2 rovné? (Are R1 and R2 Equal?) & $\rightarrow$ R4 (ACC) \\
+                0xA & GRT & Je R1 väčšie ako R2? (Is R1 more than R2) & $\rightarrow$ R4 (ACC) \\
+                \midrule
+                \multicolumn{4}{l}{\textit{\textbf{Logické operácie}}} \\
+                \midrule
+                0xB & AND & Logické A (Logic AND) & $\rightarrow$ R4 (ACC) \\
+                0xC & OR & Logické ALEBO (Logic OR) & $\rightarrow$ R4 (ACC) \\
+                0xD & NOT & Logické NIE (Logic NOT) & $\rightarrow$ R4 (ACC) \\
+                0xE & XOR & Exkluzívne ALEBO (Logic XOR) & $\rightarrow$ R4 (ACC) \\
+                \midrule
+                \multicolumn{4}{l}{\textit{\textbf{Skok (Riadenie toku)}}} \\
+                \midrule
+                0xF & JMP & Skok (Jump) na adresu v R1, ak je R2 pravdivé & --- \\
+                \bottomrule
+            \end{tabular} \\[1em]
+            \label{table:instrukcna_sada}
+        \end{table}
+
+    \subsubsection{Inštrukcie}
+    Inštrukcia predstavuje základnú jednotku programu, ktorú procesor dokáže priamo vykonať. 
+    Každá inštrukcia určuje konkrétnu operáciu, ktorú má procesor vykonať, spolu s~informáciami o~tom, 
+    kde sa nachádzajú vstupné údaje (operandy) a~kam sa má uložiť výsledok. 
+
+    Z hľadiska architektúry procesora možno inštrukciu chápať ako binárny kód, ktorý riadi činnosť 
+    vnútorných funkčných blokov --- aritmeticko-logickej jednotky (\glspl{alu}), registrov, riadiacej logiky 
+    a~pamäte. Procesor teda interpretuje jednotlivé bity inštrukcie ako súbor signálov, ktoré určujú, 
+    aké vnútorné operácie sa majú vykonať a~v~akom poradí.
+
+    Každá inštrukcia v~procese má dĺžku 8~bitov a~skladá sa z~troch častí:
+        
+    \begin{equation}
+        \label{strukturaInstrukcie}
+            \text{inštrukcia} = 
+            \underbrace{xxxx}_{\text{OP-kód}}\,
+            \underbrace{yy}_{\text{operánd~1}}\,
+            \underbrace{zz}_{\text{operánd~2}}
+    \end{equation}
+
+
+    kde:
+    \begin{itemize}
+        \item \textbf{OP-kód} --- štyri najvyššie bity (bity~7--4), ktoré určujú, aký typ operácie má byť vykonaný,
+        \item \textbf{Operánd~1} --- dva stredné bity (bity~3--2), ktoré špecifikujú prvý register alebo vstupný operand,
+        \item \textbf{Operánd~2} --- dva najnižšie bity (bity~1--0), ktoré definujú druhý register alebo operand.
+    \end{itemize}
+
+    Tento formát sa označuje ako \texttt{xxxxyyzz}, tento formát je uvedený v tabuľke \ref{strukturaInstrukcie}, 
+    kde každá skupina bitov má presne určený význam. Vďaka pevnej dĺžke inštrukcie (8~bitov) je dekódovanie 
+    jednoduché a~môže byť realizované priamo hardvérovo --- každá časť inštrukcie je priamo priradená k~vstupom 
+    dekódera, ktorý následne aktivuje príslušnú mikroinštrukciu v~riadiacej jednotke. Tabuľka \ref{OpCode} podrobnejšie vysvetľuje význam každej časti inštrukcie.
+
+
+        \begin{table}[htpb]
+            %\vspace{1em}
+            \begin{center}
+                \caption{Bitová štruktúra v~inštrukcii}
+                \label{OpCode}
+                \vspace{1em}
+                \begin{tabular}{|c|c|c|}
+                    \hline
+                    \textbf{Bity} & \textbf{Pole} & \textbf{Popis} \\ \hline
+                    7--4 & OP-kód & Typ operácie (napr.~ADD, SUB, AND, OR) \\ \hline
+                    3--2 & Operánd~1 & Číslo prvého registra (R\textsubscript{1}) \\ \hline
+                    1--0 & Operánd~2 & Číslo druhého registra (R\textsubscript{2}) \\ \hline
+                \end{tabular} 
+            \end{center}  
+        \end{table}
+
+    %\noindent
+    %\textbf{Príklad:}
+    \subsection{Príklad}
+
+    \[
+        0001\,01\,10_2 \Rightarrow 
+        \text{OP-kód} = 0001~(\text{ADD}),\quad
+        \text{R}_1 = 01~(\text{R1}),\quad
+        \text{R}_2 = 10~(\text{R2})
+    \]
+
+    Teda inštrukcia \texttt{00010110\textsubscript{2}} zodpovedá operácii 
+    \texttt{ADD R1, R2}.
+
+    \section{Vnútorná štruktúra procesora \texorpdfstring{\gls{lim}}{LIM}}
+        Na rozdiel od vysokoúrovňových programovacích jazykov, ako sú 
+        \textbf{Python}, \textbf{C}, \textbf{C\#}, \textbf{Java} alebo \textbf{Lua}, 
+        \textbf{assembler} nie je univerzálny jazyk. 
+
+        Predstavuje \emph{rodinu nízkoúrovňových jazykov}, z~ktorých každý je úzko spätý 
+        so štruktúrou konkrétneho procesora. Preto sa syntax a~množina dostupných 
+        inštrukcií môžu výrazne líšiť nielen medzi rôznymi architektúrami 
+        (napríklad medzi \textbf{x86} a~\textbf{ARM}), ale aj medzi procesormi 
+        tej istej architektúry.
+
+        Napríklad assembler pre \textbf{Intel 8086} a pre moderné procesory 
+        \textbf{Intel Core} formálne patria do architektúry \textbf{x86}, no ich 
+        množina inštrukcií, spôsoby adresovania, podporované registre a mikropokyny 
+        sa výrazne líšia. 
+
+        Moderné procesory obsahujú rozšírené sady inštrukcií (ako 
+        \textbf{MMX}, \textbf{SSE}, \textbf{AVX} a~ďalšie) a~odlišnú 
+        mikroarchitektúru, čo robí ich assemblerové programovanie omnoho 
+        zložitejším, ale zároveň funkčne bohatším v porovnaní s~prvými 
+        procesormi Intel.
+
+        Preto, aby bolo možné písať algoritmy/programy na procesore 
+        \gls{lim}, je potrebné presne vedieť, ako funguje, aké sú jeho výhody 
+        a~nevýhody, aby bolo možné správne a~efektívne spravovať dáta, 
+        pričom je potrebné zohľadniť možné nepríjemnosti spojené s~nedokonalou 
+        domácou architektúrou procesora.
+    \subsection{Vnútorná štruktúra}
+    Na obrázku \ref{vnutorna_struktura} vidno, že štruktúra je trochu preplnená kvôli 
+    rozhodnutiu opustiť zdieľanú dátovú zbernicu.
+    To uľahčuje konštrukciu riadiacej jednotky. 
+    V niektorých prípadoch je užitočné mať 
+    izolovaný tok údajov, čo, ako už bolo spomenuté, 
+    znižuje počet operácií procesora.
+    \begin{figure}[htbp]
+        \centering
+        \caption{Vnútorná štruktúra na výsokej úrovni} 
+        \label{vnutorna_struktura}
+        \includegraphics[width=\linewidth]{img/5.png}
+    \end{figure}
+    V tejto časti sa pozrieme na vnútornú štruktúru 
+    procesora na vysokej úrovni a tiež, aby sme pochopili, 
+    ako fungujú inštrukcie, sa pozrieme na to, ako funguje ovládač.
+    \subsubsection{Prvky procesora}
+    Na schéme sa stretávajú nasledujúce komponenty:
+    \begin{itemize} 
+        \item \textbf{Registre} -- Sú ich iba 4 (R1, R2, R3, R4), 
+        ale ide o~pomerne optimálne riešenie medzi výrazným 
+        skomplikovaním procesora a~optimálnou prevádzkovou 
+        rýchlosťou a~jednoduchosťou. Ich účelom je ukladať 
+        informácie potrebné pre aktuálne výpočty, či už 
+        ide o~operandy alebo výsledky predchádzajúcich 
+        výpočtov, alebo to môžu byť aj pamäťové adresy.
+        \item \textbf{Multiplexory} -- Veľmi dôležitá časť procesora, 
+        ktorá nahrádza spoločnú zbernicu. V procesore založenom na 
+        architektúre \gls{lim} sú tri, ale hlavné sú dve: \textbf{MUX\_REG} a \textbf{MUX\_STACK}. 
+        \textbf{MUX\_ACC} je záložný multiplexor určený pre 
+        ďalšie vylepšenia, jeho hlavnou myšlienkou je používať 
+        dáta priamo z~pamäte, v~budúcnosti by to malo zrýchliť 
+        viacúrovňové výpočty, aby sa nestrácal čas prípravou dát 
+        \item \textbf{ALU Cache} -- Ide o~špeciálne registre, 
+        ktoré ukladajú dáta pre bezprostrednú matematickú alebo 
+        logickú operáciu. Nedajú sa ovládať manuálne; sú prístupné 
+        iba na úrovni mikroprogramu, zapísanej pomocou mikroinštrukcií.
+        \item \textbf{ALU} -- Aritmetická logická jednotka. Jeho úlohou 
+        je vykonávať matematické operácie ako sčítanie, odčítanie, 
+        násobenie, delenie vrátane porovnávania, ako aj logické operácie 
+        ako AND, OR, NOT, XOR. Viac podrobností o~možnostiach bude 
+        prediskutovaných neskôr: (Tabuľka \ref{math}). Keďže ALU má 
+        vlastný mechanizmus pre požičiavanie a detekciu pretečenia, 
+        po dokončení matematických operácií v jednom kontexte je 
+        potrebné použiť inštrukciu NOP, ktorá vymaže príznaky pôžičky 
+        a pretečenia.
+        \item \textbf{Riadiaca jednotka} -- Toto je „mozog“ procesora. 
+        Často prijíma inštrukcie a potom na základe mikroprogramov 
+        vložených do týchto inštrukcií riadi komponenty procesora, 
+        tak aby sa dosiahol požadovaný výsledok. Nasledujúci diagram \ref{vnutorna_radiacka} je zjednodušený diagram nášho ovládača.
+    \end{itemize}
+
+    \subsubsection{Riadiaca jednotka}
+        Schéma zapojenia ovládača zobrazuje 
+        počítadlo pamäte a~veľmi podobné 
+        počítadlo mikroinštrukcií. Jediný 
+        rozdiel je v~konkrétnej pamäti, ktorú ovládajú.
+
+        Za zváženie stojí tri hlavné komponenty riadiacej 
+        jednotky, pretože zvyšok je iba výkonná časť, 
+        ktorá si nestojí za veľkú pozornosť, pretože je 
+        špecifická pre každý iný čip, a~preto nemá zmysel 
+        sa na ne zaoberať, najmä preto, že priamo 
+        neovplyvňujú princíp programovania.
+
+        \begin{itemize}
+            \item \textbf{Ovládač programovej pamäte} 
+            (Na obrázku \ref{vnutorna_radiacka} zvýraznený červenou farbou). 
+            Jeho úlohou je dávať inštrukcie procesoru. 
+            Najčastejšie je jeho úlohou iterovať pamäťou, 
+            vykonávať inštrukcie jednu po druhej, pričom s~každou 
+            inštrukciou jednoducho zvyšuje adresu pamäťovej bunky o~1.
+            \item \textbf{Riadiaca jednotka registra mikroinštrukcií} 
+            (Na obrázku \ref{vnutorna_radiacka} zvýraznené modrou farbou)
+            Jeho úloha je takmer rovnaká ako v Ovládači programovej 
+            pamäte, len prechádza mikroinštrukciami namiesto bežných inštrukcií.
+            \item \textbf{Dekodér mikroinštrukcií} (Na obrázku  \ref{vnutorna_radiacka} zvýraznené fialovou farbou)
+            Vysiela elektrický signál na určitom vedení, čím dáva signál 
+            požadovanej časti ovládača na vykonanie nejakej jednoduchej úlohy. 
+            Napríklad: prepnutie čítacieho registra alebo uloženie dát 
+            do vyrovnávacej ALU Cache.
+            \item \textbf{Register mikroinštrukcií} Uchováva 
+            (Na obrázku \ref{vnutorna_radiacka} zvýraznené zelenou farbou)
+            inštrukčné mikroprogramy a počas prevádzky procesora 
+            po prijatí inštrukcie radič mikroinštrukcií presmeruje 
+            vykonávanie mikroprogramu na ten, ktorý zodpovedá 
+            požadovanej inštrukcii, až po špeciálny koncový príznak ~\texttt{0xF0}
+        \end{itemize}
+        
+    \begin{figure}[htbp]
+        \centering
+        \caption{Vnútorná štruktúra Riadiacej jednotky}
+        \label{vnutorna_radiacka}
+        \includegraphics[width=\linewidth]{img/6.png}
+    \end{figure}
+    
+        Každá bežná inštrukcia procesora sa dá považovať za \emph{zloženú funkciu}, 
+        ktorá sa vo vnútri procesora rozkladá na viacero menších krokov nazývaných 
+        \textbf{mikroinštrukcie}.  
+
+        Tieto mikroinštrukcie predstavujú najjednoduchšie, ďalej nedeliteľné operácie, 
+        ktoré procesor vykonáva priamo na úrovni svojich vnútorných registrov, 
+        zberníc a~riadiacich signálov.  
+
+        Zjednodušene povedané, každá makroinštrukcia (napr.~\texttt{ADD R1, R2}) 
+        je v~mikrokóde reprezentovaná ako sekvencia mikroinštrukcií, ktoré postupne 
+        zabezpečujú načítanie operandov, vykonanie aritmetickej operácie a~zápis 
+        výsledku späť do registra.  
+
+        Týmto spôsobom je možné vytvoriť flexibilný a~univerzálny riadiaci mechanizmus, 
+        v~ktorom sa správanie procesora dá meniť alebo rozširovať úpravou jeho 
+        mikroprogramu bez potreby meniť fyzickú logiku obvodov.
+
+        \subsection{Príklad mikroprogramu pre inštrukciu \texttt{ADD}}
+
+        Nasledujúca tabuľka \ref{mikroADD} znázorňuje mikroprogram pre inštrukciu \texttt{ADD R1, R2}, 
+        ktorá zabezpečuje sčítanie dvoch registrov a uloženie výsledku do akumulátora (\texttt{REG3}).  
+        Každý krok je reprezentovaný mikroinštrukciou, zapísanou v hexadecimálnej forme, a~stručne opísaný jej účel.
+        \begin{table}[h!
+            ]
+            \caption{ADD mikroprogram}
+            \label{mikroADD}
+            \begin{center}
+            \renewcommand{\arraystretch}{1.1}
+            \setlength{\tabcolsep}{3.5pt}
+                \begin{tabular}{|c|c|c|p{6.3cm}|}
+                    \hline
+                    \textbf{Kód (HEX)} & \textbf{Binárny tvar} & \textbf{Označenie} & \textbf{Popis činnosti} \\
+                    \hline
+                    \texttt{0x70} & \texttt{0111 00 00} & Čítanie \#1 & Načíta hodnotu registra určeného prvým parametrom inštrukcie (\texttt{\gls{reg}1}) \\
+                    \hline
+                    \texttt{0xC0} & \texttt{1100 00 00} & Cache \#1 & Uloží načítanú hodnotu do prvého dočasného registra (cache \#1) \\
+                    \hline
+                    \texttt{0x71} & \texttt{0111 00 01} & Čítanie \#2 & Načíta hodnotu registra určeného druhým parametrom (\texttt{\gls{reg}2}) \\
+                    \hline
+                    \texttt{0xC1} & \texttt{1100 00 01} & Cache \#2 & Uloží načítanú hodnotu do druhého dočasného registra (cache \#2) \\
+                    \hline
+                    \texttt{0x90} & \texttt{1001 00 00} & Režim \gls{alu} & Nastaví \gls{alu} do režimu sčítania \\
+                    \hline
+                    \texttt{0xA8} & \texttt{1010 1 000} & Trigger \gls{alu} & Spustí výpočet v \gls{alu} na základe údajov v cache \\
+                    \hline
+                    \texttt{0x53} & \texttt{0101 00 11} & Zápis do \texttt{REG3} & Zapíše výsledok operácie do akumulátora \\
+                    \hline
+                    \texttt{0xA0} & \texttt{1010 00 00} & Uzavretie \gls{alu} & Ukončí činnosť \gls{alu} a obnoví neutrálne riadiace signály \\
+                    \hline
+                    \texttt{0xF0} & \texttt{1111 0000} & Koniec & Označuje ukončenie sekvencie mikroinštrukcií \\
+                    \hline
+                \end{tabular}
+            \end{center}
+        \end{table}
+        Každý binárny kód určuje konkrétnu operáciu \gls{alu} a slúži na jej aktiváciu 
+        prostredníctvom mikroinštrukcie. \glspl{hex} kód je uvedený pre rýchlu referenciu a~praktické využitie pri mikroprogramovaní.
+       
+        Tento mikroprogram reprezentuje kompletný vnútorný priebeh vykonania inštrukcie 
+        \texttt{ADD}, od načítania operandov až po uloženie výsledku do akumulátora. 
+        Každá mikroinštrukcia zodpovedá presne definovanej sade riadiacich signálov 
+        v mikroinštrukčnom registri procesora.
+        
+        \subsection{Podporované operácie ALU}
+        Nasledujúca tabuľka \ref{math} uvádza všetky operácie, ktoré ALU procesora dokáže vykonať, 
+        spolu s~ich binárnym a~hexadecimálnym kódom.
+        \begin{center}
+            \begin{table}[h!]
+                \caption{ALU funkcie}
+                \vspace{1em}
+                \label{math}
+                \begin{center}
+                    \renewcommand{\arraystretch}{1.2}
+                    \setlength{\tabcolsep}{6pt}
+                    \begin{tabular}{|c|c|l|}
+                        \hline
+                        \textbf{Binárny kód} & \textbf{HEX} & \textbf{Operácia} \\
+                        \hline
+                        0000 & 0x0 & Sčítanie (+) \\
+                        0001 & 0x1 & Odčítanie (-) \\
+                        0010 & 0x2 & Násobenie (*) \\
+                        0011 & 0x3 & Delenie (/) \\
+                        \hline
+                        0100 & 0x4 & Porovnanie: =, <, > (príklad: 0x1, 0x2, 0x3) \\
+                        0101 & 0x5 & Rovnosť (==) \\
+                        0110 & 0x6 & Väčšie (>) \\
+                        \hline
+                        1000 & 0x8 & Logické AND \\
+                        1001 & 0x9 & Logické OR \\
+                        1010 & 0xA & Logické XOR \\
+                        1011 & 0xB & Logické NOT \\
+                        \hline
+                    \end{tabular}
+                \end{center}
+            \end{table}
+        \end{center}
+        %\vspace{2em}
+    
+    \newpage
+    \section{Vývoj algoritmu (programu)}
+        
+    V tejto sekcii sú predstavené viaceré 
+    príklady programov napísané v~nízkoúrovňovom 
+    jazyku navrhnutom pre vlastný procesor.  
+    Každý z~nich demonštruje praktické využitie 
+    definovaných inštrukcií a~spôsob, akým možno 
+    pomocou jednoduchých registrových operácií 
+    realizovať rôzne výpočtové úlohy.  
+
+    Programy sú zostavené bez použitia riadiacich 
+    štruktúr, ako sú cykly alebo podmienené vetvenie, 
+    a~teda reprezentujú čisto lineárny prístup k vykonávaniu inštrukcií.  
+    Cieľom tejto časti je ukázať princíp práce 
+    procesora na úrovni jednotlivých inštrukcií 
+    a~mikrokrokov, ako aj spôsob, akým možno pomocou 
+    týchto základných operácií vytvoriť kompletné výpočtové postupy.
+
+    \subsection{Program na výpočet faktoriálu}
+
+    Nasledujúci program \ref{faktorialASM} predstavuje jednoduchý 
+    príklad lineárnej implementácie výpočtu 
+    faktoriálu čísla uloženého v~registri \texttt{R0}.  
+    Program slúži na ilustráciu základných princípov 
+    práce s~registrami a~aritmetickými operáciami, 
+    bez použitia cyklov alebo príkazov podmieneného skoku.  
+    Predpokladá sa, že registre \texttt{R1} 
+    (počitadlo) a \texttt{R3} (akumulátor – výsledok) 
+    sú na začiatku inicializované hodnotou \texttt{1}.  
+
+    Princíp výpočtu spočíva v postupnom násobení 
+    akumulátora \texttt{R3} aktuálnym číslom v~registri 
+    \texttt{R1} a~v~inkrementácii registra 
+    \texttt{R1} o~jednotku po každom kroku.  
+    Program je zapísaný ako sekvencia jednotlivých 
+    inštrukcií, aby bol prehľadný a~vhodný na 
+    demonštráciu fungovania procesora.
+
+    Výsledná hodnota faktoriálu je uložená v 
+    registri \texttt{R3} po ukončení programu.
+
+    \newpage
+    \begin{figure}[htbp]
+        \centering
+        \begin{lstlisting}[language=MyASM, caption={Lineárny program na výpočet faktoriálu}, label={faktorialASM}]
+; Step 1: R3 = R3 * R1
+MUL R3, R1      ; ACC = 1
+ADD R1, R0      ; increment counter
+
+; Step 2: R3 = R3 * R1
+MUL R3, R1      ; ACC = 2
+ADD R1, R0      ; increment counter
+
+; Step 3: R3 = R3 * R1
+MUL R3, R1      ; ACC = 6
+ADD R1, R0      ; increment counter
+
+; Step 4: R3 = R3 * R1
+MUL R3, R1      ; ACC = 24
+
+; End of program
+NOP             ; factorial result is now in R3
+        \end{lstlisting}
+    \end{figure}
+
+    \subsection{Sčítanie viacbajtových čísel}
+
+    Nasledujúci program \ref{viacbajtoveASM} demonštruje princíp 
+    postupného sčítania dvoch viacbajtových 
+    čísel pomocou registrového procesora.  
+    Keďže architektúra umožňuje pracovať iba 
+    s obmedzeným počtom registrov a~každá 
+    inštrukcia spracúva len časť dát, sčítanie 
+    sa vykonáva po jednotlivých častiach 
+    (napríklad po bajtoch) a~výsledok sa 
+    postupne ukladá do pamäte.  
+
+    Program ilustruje:
+    \begin{itemize}
+        \item Postupné načítavanie častí operandov z pamäti do registrov,
+        \item Aritmetické sčítanie,
+        \item Postupné ukladaní výsledku späť do pamäti,
+        \item Lineárnu štruktúru programu bez cyklov a podmienených skokov.
+    \end{itemize}
+
+    Takýto lineárny prístup je vhodný na demonstráciu 
+    práce procesora s~väčšími číslami a~ukazuje základné 
+    princípy manipulácie s~dátami na mikroúrovni.
+    \begin{figure}[htbp]
+        \centering
+        \begin{lstlisting}[language=MyASM, caption={Sčítanie viacbajtových čísel}, label={viacbajtoveASM}]
+LMR 0 1 ;Load next number to register
+0x01
+LMR 1 1 ;Load next number to register
+0x01
+ADD 0 1 ;Sum of REG1 and REG2
+LMR 2 1
+0xFA
+LRM 3 2 ;Save result to MEM by REG2 pointer
+
+;Sum of less significant bits
+
+LMR 0 1 ;Load next number to register
+0x01
+LMR 1 1 ;Load next number to register
+0x01
+ADD 0 1 ;Summ of REG1 and REG2
+LMR 2 1
+0xFB
+LRM 3 2 ;Save result to MEM by REG2 pointer
+
+;Sum of more significant bits
+
+LMR 0 1 ;Load next number to register
+0x01
+LMR 1 1 ;Load next number to register
+0x01
+ADD 0 1 ;Summ of REG1 and REG2
+LMR 2 1
+0xFC
+LRM 3 2 ;Save result to MEM by REG2 pointer
+
+;Sum of more significant bits
+
+NOP     ;End of program. Clear borrowings 
+
+    \end{lstlisting}
+    \end{figure}
+    
+    Program načítava \textbf{najmladšie bity} (0--7) operandov, vykoná ich sčítanie a výsledok uloží na konkrétnu adresu v pamäti.  
+    V kontexte predloženej implementácie sa tento postup opakuje ešte dvakrát pre ďalšie časti čísel:  
+
+    \begin{itemize}
+        \item Najmladšie bity (0--7) sa sčítajú a výsledok sa uloží na adresu \texttt{0xFA}.
+        \item Nasledujúce bity (8--15) sa sčítajú a uloží sa výsledok na adresu \texttt{0xFB}.
+        \item Najvyššie bity (16--23) sa sčítajú a uloží sa výsledok na adresu \texttt{0xFC}.
+    \end{itemize}
+
+    \medskip
+
+    Konkrétny príklad:
+
+    \begin{itemize}
+        \item Číslo \texttt{A} = 00000001 00000001 00000001
+        \item Číslo \texttt{B} = \texttt{A}
+    \end{itemize}
+
+    Postup sčítania:
+
+    \begin{enumerate}
+        \item \texttt{A(0--7) + B(0--7)} → uložené do \texttt{0xFA}
+        \item \texttt{A(8--15) + B(8--15)} → uložené do \texttt{0xFB}
+        \item \texttt{A(16--23) + B(16--23)} → uložené do \texttt{0xFC}
+    \end{enumerate}
+
+    Výsledok sčítania:  
+    \[
+        \texttt{A + B} = 00000010~00000010~00000010
+    \]
+
+    Tento postup ilustruje princíp postupného 
+    sčítania viacbajtových čísel, kde každá 
+    časť sa spracúva samostatne a~výsledok sa 
+    ukladá do pamäťových buniek po častiach.
+
+    Po tomto kroku je dôležité použiť inštrukciu 
+    \texttt{NOP}, ktorá vymaže príznaky pôžičky 
+    a~pretečenia (borrow a~overflow). Tento príklad 
+    platí rovnako aj pre ostatné matematické operácie.  
+
+    Existuje však dôležitý moment pri spracovaní veľkých čísel:  
+    ak výsledok súčtu trojbajtového čísla môže prekročiť 3~bajty 
+    (teda stať sa 4-bajtovým), stačí v prípade pretečenia 
+    jednoducho sčítať dve nuly (\texttt{0~+~0}) — tým sa 
+    automaticky zohľadní pretečenie.  
+
+    Podobne to funguje pri násobení: ak sa vynásobí (\texttt{1 * 1}) 
+    v najvyšších bajtoch, pretečenie sa takisto správne zohľadní.  
+
+    Pri odčítaní alebo delení takéto riešenie nie je možné ani 
+    logicky, ani matematicky, pretože vznik pretečenia alebo pôžičky 
+    sa musí riešiť priamo v rámci algoritmu operácie.
+
+    \subsection{Používanie podmienok a porovnaní}
+    Nasledujúci program \ref{alg1} bude príkladom toho, ako 
+    používať inštrukcie pre rôzne testy, či už 
+    ide o~\verb|<, >, =, !=| 
+    a~boolovské funkcie \verb|AND, OR, NOT| a~ďalšie.
+
+    V nasledujúcom programe \ref{ifwhile}, ak je číslo v~registri 
+    \gls{reg}~3 menšie ako zadané číslo v~registri \gls{reg}~2, toto 
+    číslo sa zvýši o~1. Napríklad, toto číslo by bolo 10. 
+    Ak je registr \gls{reg}~3 10 alebo vyššie, program bude 
+    pridávať 10, kým nedosiahne 100. Keď sa dosiahne 100, 
+    program sa začne odznova.
+
+    Na implementáciu tohto programu je potrebné načítať 
+    hlavné hodnoty do registrov: \gls{reg}~3 = 0, \gls{reg}~2 = 10, 
+    \gls{reg}~1 = 0, \gls{reg}~0 = 1. Pre tento algoritmus je \gls{reg}~3 
+    počítadlo. \gls{reg}~2 je prvý limit. \gls{reg}~1 
+    jednoducho vymažeme, pretože ho budeme potrebovať 
+    počas vykonávania algoritmu. \gls{reg}~0 uchováva iterátor.
+    Nasledujúci algoritmus~\ref{alg1} je pohodlnou reprezentáciou toho, čo je napísané:
+
+    \begin{algorithm}
+\caption{Ukážkový program na používanie podmienok a porovnaní}
+\label{alg1}
+\begin{algorithmic}
+\If{$i < 10$}
+    \State $i \gets i + 1$
+\Else
+    \While{$i < 100$}
+        \State $i \gets i + 10$
+    \EndWhile
+    \State $i \gets 0$
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+Ďalej bude tento algoritmus prepísaný v assembleri pre našu architektúru.
+    \begin{figure}[htbp]
+        \begin{lstlisting}[language=MyASM, caption={Ukážkový program na používanie podmienok a porovnaní}, label={ifwhile}]
+LMR 1 1     ;R1 = 0x0
+0x0         ;0x0 (HEX) == 0 (DEC)
+LMR 2 1     ;R2 = 0x0
+0xA         ;0xA (HEX) == 10 (DEC)
+LMR 3 1     ;R3 = 0x0
+0x0         ;0x0 (HEX) == 0 (DEC)
+
+;---Ked cislo je mensie za 10---
+LMR 0 1     ;riadok programu je 9 (0x9), R1 = 0x1
+0x1         ;0x1 (HEX) == 1 (DEC)
+ADD 0 1     ;R0 + R1 => R3
+LRR 3 1     ;R1 = R3
+GRT 2 1     ;R2 > R1 => R3
+LMR 0 1     ;R0 = 0x9
+0x9         ;0x9 (HEX) == 9 (DEC)
+JMP 0 3     ;Program prejde na 9 riadok ak R3 = true (1)
+            ;Ak nieje R3 = true processor ide dalej po pamati
+
+;---Ked 10 < cislo < 100
+LMR 2 1     ;R1 = 0x64
+0x64        ;0x64 HEX = 100 DEC
+LMR 0 1     ;riadok programu je 22 (0x16), R0 = 0xA
+0xA         ;0xA (HEX) == 10 (DEC)
+ADD 0 1     ;R0 + R1 => R3
+LRR 3 1     ;R1 = R3
+GRT 2 1     ;R2 > R1 => R3
+LMR 0 1     ;R0 = 0x16
+0x16        ;0x16 (HEX) == 22 (DEC)
+JMP 0 3     ;Skokne na 22 riadok programu
+
+;--- Vrati sa na zaciatok ---
+LMR 0 1     ;R0 = 0x1
+0x1         ;0x1 (HEX) == 1 (DEC)
+JMP 0 0     ;Skokne na 1 riadok programu (do zaciatku)
+
+
+        \end{lstlisting}
+    \end{figure}
+    
+    \newpage
+    \section*{Záver}
+    \pagestyle{empty}
+    V tejto práci bola podrobne predstavená 
+    architektúra vlastného procesora \textbf{\gls{lim}}, 
+    ktorú vyvinul autor, jeho vnútorná štruktúra, 
+    súbor inštrukcií a~princípy práce s~mikrokódom. 
+    Ukázalo sa, že každá inštrukcia procesora 
+    kombináciu OP-kódu a operandov, ktoré sú 
+    hardvérovo interpretované prostredníctvom 
+    registrov, \glspl{alu} a~riadiacich signálov. Na 
+    konkrétnych príkladoch — výpočet faktoriálu, 
+    sčítanie viacbajtových čísel a~podmieňove ulohy. — boli demonštrované 
+    princípy lineárneho a~cyklického vykonávania programov, 
+    interakcia registrov a~cache dát, ako aj 
+    spracovanie aritmetických operácií na úrovni mikrokódu.  
+
+    Vytvorenie vlastnej architektúry \textbf{\gls{lim}} umožnilo 
+    autorovi detailne pochopiť vnútorné fungovanie procesora, 
+    mechanizmus vykonávania inštrukcií a princíp mikroinštrukcií. 
+    Táto práca sa zameriava výhradne na programovú časť systému, 
+    čo umožňuje porozumieť fungovaniu procesora bez potreby hlbokých 
+    znalostí každého fyzického prvku alebo celej architektúry. 
+    Od začiatku bola najprv vyvíjaná softvérová časť procesora 
+    a až neskôr sa môže pristúpiť k jej implementácii v reálnej 
+    fyzickej podobe. Takýto prístup poskytuje prehľadný a praktický 
+    základ pre pochopenie princípov nízkoúrovňového programovania a 
+    flexibilného mikroprogramového riadenia, pričom efektivita 
+    algoritmov závisí od správneho využitia registrov, \gls{alu} a 
+    riadiacich signálov. Možná budúca práca by sa potom mohla 
+    sústrediť na elektronické a logické schémy procesora až na 
+    úrovni tranzistorov.
+
+    Pre tých, ktorí by chceli experimentovať s architektúrou \textbf{\gls{lim}} 
+    aj prakticky, je dostupná najnovšia verzia návrhu procesora vo forme 
+    súboru pre simulátor Logisim. Tento súbor je zverejnený na GitHube \cite{LIMCPU}
+    a je možné si ho stiahnuť, otvoriť v Logisim a voľne experimentovať so 
+    zapojením, testovať mikroinštrukcie či vytvárať vlastné modifikácie procesora.
+
+    \newpage
+    \printbibliography
+
+    \newpage
+    \section*{AI}
+    Každá časť tejto práce bola gramaticky skontrolovaná pomocou ChatGPT.
+
+
+    \pagestyle{empty}
+
+    \end{document}
